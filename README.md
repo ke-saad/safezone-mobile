@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # safezone
 
 A new Flutter project.
@@ -14,3 +15,6 @@ A few resources to get you started if this is your first Flutter project:
 For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
+=======
+# safezone-mobile
+>>>>>>> cf52c0cdff36b7f37583db58868a757a7f26e74e
