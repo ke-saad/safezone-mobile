@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:safezone/Forgotpasswd.dart';
 import 'package:safezone/map.dart';
+import 'package:safezone/map2.dart';
 import 'package:safezone/signin.dart';
 import 'package:http/http.dart' as http;
 
@@ -200,7 +201,7 @@ class _LoginState extends State<Login> {
         debugPrint("Email : ${emailController.text}");
         debugPrint("Password : ${passwordController.text}");
         Navigator.push(
-            context, MaterialPageRoute(builder: (context) => const Mapage()));
+            context, MaterialPageRoute(builder: (context) => HomeScreen()));
         loginUser();
       },
       style: ElevatedButton.styleFrom(
