@@ -41,7 +41,7 @@ function MainTabs() {
             ListScreen: focused ? "list" : "list-outline",
             DetailsScreen: focused ? "information-circle" : "information-circle-outline",
           };
-          return <Ionicons name={icons[route.name]} size={30} color={"#659136"} />;
+          return <Ionicons name={icons[route.name]} size={30} color={"#007AFF"} />;
         },
       })}
     >

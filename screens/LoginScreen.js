@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, TextInput, Button, StyleSheet, Alert } from 'react-native';
+import { View, TextInput, Pressable, StyleSheet, Alert, Image, Text } from 'react-native';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext'; // Ensure proper import
 
@@ -12,7 +12,7 @@ const LoginScreen = () => {
         try {
             console.log('Attempting to login with:', { username, password });
 
-            const response = await axios.post('http://192.168.0.195:3001/userslogin', {
+            const response = await axios.post('http://192.168.1.127:3001/userslogin', {
                 username: username,
                 password: password
             });
@@ -40,11 +40,18 @@ const LoginScreen = () => {
 
     return (
         <View style={styles.container}>
+            <Text style={styles.header}>SafeZone</Text>
+            <Image
+                source={require('../assets/icon.png')}
+                style={styles.icon}
+            />
+            <Text style={styles.title}>Your Safety Matters the Most</Text>
             <TextInput
                 style={styles.input}
                 placeholder="Username"
                 value={username}
                 onChangeText={setUsername}
+                placeholderTextColor="#888"
             />
             <TextInput
                 style={styles.input}
@@ -52,11 +59,11 @@ const LoginScreen = () => {
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
+                placeholderTextColor="#888"
             />
-            <Button
-                title="Login"
-                onPress={handleLogin}
-            />
+            <Pressable onPress={handleLogin} style={styles.loginButton}>
+                <Text style={styles.buttonText}>Login</Text>
+            </Pressable>
         </View>
     );
 };
@@ -65,15 +72,49 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         justifyContent: 'center',
-        alignItems: 'center'
+        alignItems: 'center',
+        backgroundColor: 'white',
+        padding: 20,
+    },
+    header: {
+        fontSize: 32,
+        fontWeight: 'bold',
+        color: 'white',
+        marginBottom: 20,
+    },
+    icon: {
+        width: 100,
+        height: 100,
+        marginBottom: 20,
+    },
+    title: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        marginBottom: 30,
+        textAlign: 'center',
+        color: 'white',
     },
     input: {
         width: '80%',
         padding: 10,
-        margin: 10,
+        marginVertical: 10,
         borderWidth: 1,
-        borderColor: '#ddd'
-    }
+        borderColor: '#ddd',
+        borderRadius: 5,
+        backgroundColor: '#f9f9f9',
+    },
+    loginButton: {
+        backgroundColor: '#007AFF',
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        borderRadius: 5,
+        marginTop: 20,
+    },
+    buttonText: {
+        color: 'white',
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
 });
 
 export default LoginScreen;
