@@ -1,179 +1,145 @@
-import { StyleSheet, Text, View, Pressable, Image, FlatList, TextInput, TouchableOpacity } from 'react-native'
-import React, { useState, useEffect } from 'react'
-import TopList from '../components/topList';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import * as Location from 'expo-location';
-import { getDistance } from 'geolib';
-import data from '../components/all-places.json';
+import React, { useState, useEffect } from 'react';
+import { View, Text, FlatList, Pressable, Alert, StyleSheet } from 'react-native';
+import axios from 'axios';
 
-const ListScreen = ({navigation, route}) => {
-
-    const [location, setLocation] = useState(null);
-    const [errorMsg, setErrorMsg] = useState(null);
-
-    useEffect(() => { //useEffect function used to gain the users permission for their location.
-      (async () => {  // The app will run regardless, it just allows the user to see where they are on the map...
-                      // ... in relation to national trust places
-        let { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') {
-          setErrorMsg('Permission to access location was denied');
-          return;
-        }
-
-        let location = await Location.getCurrentPositionAsync({});
-        setLocation(location);
-      })();
-    }, []);
-
-    let text = 'Waiting..';
-    if (errorMsg) {
-      text = errorMsg;
-    } else if (location) {
-      text = JSON.stringify(location);
-      //console.log(location)
-    }
-
-    // useState variables used to store data
-    const [ nationalData, setnationalData ] = useState({})
-    const [ refreshing, serRefreshing ] = useState(false) // used to refresh flatList
-    const [value, onChangeText] = useState('')
-    const [ localData, setlocalData ] = useState({})
-
-    // axios and use effect function used here to pull data from national trust 
-    // const axiosInstance = axios.create({ baseURL: 'https://www.nationaltrust.org.uk/search/data/all-places' });
-
-    // useEffect(() => {
-    //   axiosInstance.get().then((response) => {
-    //       setnationalData(Object.values(response.data))
-    //       setlocalData(Object.values(response.data))
-    //   })
-    // }, [])
+const ListScreen = ({ navigation }) => {
+    const [safeZones, setSafeZones] = useState([]);
+    const [dangerZones, setDangerZones] = useState([]);
+    const [error, setError] = useState("");
 
     useEffect(() => {
-      setnationalData(Object.values(data))
+        fetchZones();
     }, []);
 
-    const handleSearch = (text) => {  //Allows flatList to be filtered (seachred)
-      //console.log(text)
-      onChangeText(text);
-      let items = localData;
-      let newData = items;
+    const fetchZones = async () => {
+        try {
+            const [safeResponse, dangerResponse] = await Promise.all([
+                axios.get('http://192.168.1.127:3001/safezones'),
+                axios.get('http://192.168.1.127:3001/dangerzones')
+            ]);
+            setSafeZones(safeResponse.data);
+            setDangerZones(dangerResponse.data);
+        } catch (error) {
+            setError("Failed to fetch zones.");
+        }
+    };
 
-      if (text) {
-        newData = items.filter(item => {
-        const itemData = item.title.toLowerCase();
-        const textData = text.toLowerCase();
-        
-        return itemData.indexOf(textData) > -1; 
-        });
-      }
+    const deleteZone = async (id, type) => {
+        const endpoint = type === 'safe' ? `http://192.168.1.127:3001/safezones/${id}` : `http://192.168.1.127:3001/dangerzones/${id}`;
+        try {
+            await axios.delete(endpoint);
+            fetchZones();
+        } catch (error) {
+            setError("Failed to delete zone.");
+        }
+    };
 
-      setnationalData(newData);
-      }
+    const renderZone = ({ item, index, type }) => (
+        <View style={styles.zoneContainer}>
+            <Text style={styles.zoneText}>Zone {index + 1} ({type})</Text>
+            <View style={styles.buttonContainer}>
+                <Pressable
+                    style={[styles.button, styles.infoButton]}
+                    onPress={() => navigation.navigate('DetailsScreen', { id: item._id, type })}
+                >
+                    <Text style={styles.buttonText}>Show Information</Text>
+                </Pressable>
 
-      const calculateDistance = () => { // This function isn't used, however, shows how its possible to calculate
-        var dis = getDistance(          //the users distance from a set longitude and latitude
-          { latitude: 51.528308, longitude: -0.3817765 },
-          { latitude: 51.528308, longitude: -0.3817765 }
-        );
-        //console.log(`Distance\n\n${dis} Meters\nOR\n${dis / 1609} Miles`);
-      };
-      
-      calculateDistance();
-  return ( // Returns the views and flatlist for the page
-    <View style={styles.container}>
-      <TopList />
-      <TextInput // Input used to call the search function(filtering the list)
-        style={styles.textInputStyle}
-        onChangeText={(text) => handleSearch(text)}
-        underlineColorAndroid="transparent"
-        value={value}
-        placeholder="Search by name..."
-        placeholderTextColor={"grey"}
-      />
-      <FlatList // Flatlist that takes in the data that axois got and displays it within a touchable opacity 
-        style={styles.flatlist} 
-        data={nationalData}
-        showsVerticalScrollIndicator={false}
-        keyExtractor={(item) => item.id}
-        numColumns={2}
-        renderItem={({ item }) => (
-          <TouchableOpacity style={styles.main} onPress={() => navigation.push("DetailsScreen", {paramA: item.id, paramB: item.location})}>
-            <Image source={{ uri: item.imageUrl }} style={styles.image}></Image>
-            <View style={styles.card}>
-                <Text style={styles.texttitle}>{item.title}</Text>
-                <Text numberOfLines={2} style={styles.textsubtitle}>{item.description}</Text>
+                <Pressable
+                    style={[styles.button, styles.deleteButton]}
+                    onPress={() => {
+                        Alert.alert(
+                            "Delete Zone",
+                            "Are you sure you want to delete this zone?",
+                            [
+                                { text: "Cancel", style: "cancel" },
+                                { text: "Delete", onPress: () => deleteZone(item._id, type) }
+                            ]
+                        );
+                    }}
+                >
+                    <Text style={styles.buttonText}>Delete</Text>
+                </Pressable>
             </View>
-          </TouchableOpacity>
-        )}
-        //refreshing={refreshing}
-      />
-    </View>
-  )
-}
+        </View>
+    );
 
-export default ListScreen
+    return (
+        <View style={styles.container}>
+            <Text style={styles.title}>All Zones</Text>
+            {error ? <Text style={styles.errorText}>{error}</Text> : null}
+            <FlatList
+                data={[...safeZones.map((zone, index) => ({ ...zone, type: 'Safe' })), ...dangerZones.map((zone, index) => ({ ...zone, type: 'Dangerous' }))]}
+                keyExtractor={item => item._id}
+                renderItem={({ item, index }) => renderZone({ item, index, type: item.type })}
+                contentContainerStyle={styles.list}
+            />
+        </View>
+    );
+};
 
-const styles = StyleSheet.create({ //Provides all the styling for the page
-  container: {
-    flex: 1,
-  },
-  main: {
-    width: "48%",
-    margin: 4,
-    height: "auto",
-  },
-  image: {
-    width: "100%",
-    height: 110,
-    borderTopRightRadius: 25,
-    borderTopLeftRadius: 25,
-  },
-  card: {
-    backgroundColor: "white",
-    height: 150,
-    shadowColor: "black",
-    width: "100%",
-    borderBottomLeftRadius: 25,
-    borderBottomRightRadius: 25,
-    shadowOffset: {
-    width: 0,
-    height: 4,
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: 'white',
+        padding: 20,
     },
-    shadowOpacity: 0.25,
-    shadowRadius: 5,
-    elevation: 5,
-  },
-  texttitle: {
-    marginHorizontal: 5, 
-    marginTop: 10,
-    fontSize: 15,
-    fontWeight: "bold",
-    textAlign: "center",
-    color: "#007A3B"
-  },
-  textsubtitle: {
-      marginHorizontal: 5,
-      marginTop: 5,
-      textAlign: "center",
-      color: "#007A3B",
-      marginBottom: 10
-  },
-  moreInfo: {
-    alignSelf: "center",
-    margin: 15,
-    color: "#007A3B",
-    fontWeight: "bold",
-    textAlign: "center"
-  },
-  textInputStyle: {
-    height: 40,
-    paddingLeft: 20,
-    margin: 5,
-    borderRadius: 10,
-    backgroundColor: '#FFFFFF',
-  },
-  flatlist: {
-    marginBottom: 100,
-  }
-})
+    title: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        textAlign: 'center',
+        marginBottom: 20,
+        color: '#007AFF',
+    },
+    errorText: {
+        color: 'red',
+        textAlign: 'center',
+        marginBottom: 20,
+    },
+    list: {
+        flexGrow: 1,
+    },
+    zoneContainer: {
+        backgroundColor: '#f9f9f9',
+        padding: 15,
+        borderRadius: 10,
+        marginBottom: 15,
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+        elevation: 5,
+    },
+    zoneText: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginBottom: 10,
+    },
+    buttonContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+    },
+    button: {
+        padding: 10,
+        borderRadius: 5,
+    },
+    infoButton: {
+        backgroundColor: '#007AFF',
+    },
+    editButton: {
+        backgroundColor: '#FFA500',
+    },
+    deleteButton: {
+        backgroundColor: '#FF3B30',
+    },
+    buttonText: {
+        color: 'white',
+        fontWeight: 'bold',
+        textAlign: 'center',
+    },
+});
+
+export default ListScreen;

@@ -174,12 +174,12 @@ const MapScreen = ({ navigation }) => {
       "You are currently in a danger zone!",
       [{ text: "OK", onPress: () => setWarningShown(true) }]
     );
-    setTimeout(() => setWarningShown(false), 300000); // Reset warningShown after 5 minutes
+    setTimeout(() => setWarningShown(false), 300000); 
   };
 
   useEffect(() => {
     checkDangerZone();
-    const interval = setInterval(checkDangerZone, 300000); // Recheck every 5 minutes
+    const interval = setInterval(checkDangerZone, 300000); 
     return () => clearInterval(interval);
   }, [location, dangerousGeoJsonLayers]);
 
