@@ -8,10 +8,10 @@ GeoGuard est une application dédiée à la surveillance en temps réel des zone
   - [Frontend Web](#frontend-web)
   - [Frontend Mobile](#frontend-mobile)
   - [Backend](#backend)
-- [Installation](#installation)
 - [Utilisation](#utilisation)
 - [Video Demonstration](#Video-Demonstration)
 - [Dépendances](#dépendances)
+- [Installation](#installation)
 - [Contribuer](#contribuer)
 
   ## Aperçu
@@ -62,12 +62,12 @@ npm start
 
 # Lancer l'application frontend web dans un autre terminal
 npm start
-
+ ```bash
 
 ## Utilisation
 Après l'installation, accédez à http://localhost:3000 pour le front-end web admin ou utilisez l'application mobile pour une interaction en temps réel avec les zones.
-## Dépendances
 
+## Dépendances
 React ^17.0.2
 React Native ^0.63.4
 Node.js ^14.17.0
