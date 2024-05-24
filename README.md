@@ -62,9 +62,9 @@ npm start
 
 # Lancer l'application frontend web dans un autre terminal
 npm start
-'''
+\`\`\`
 
-## Utilisation
+### Utilisation
 Après l'installation, accédez à http://localhost:3000 pour le front-end web admin ou utilisez l'application mobile pour une interaction en temps réel avec les zones.
 
 ## Dépendances
