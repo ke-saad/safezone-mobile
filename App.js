@@ -31,7 +31,6 @@ function MainTabs() {
           position: "absolute",
           borderRadius: 15,
           height: 70,
-          tabBarShowLabel: "true",
           paddingBottom: 0,
           ...styles.shadow,
         },

@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "SafeZone",
-    "slug": "SafeZone",
+    "name": "GeoGuard",
+    "slug": "GeoGuard",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

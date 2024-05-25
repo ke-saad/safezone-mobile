@@ -12,7 +12,7 @@ const LoginScreen = () => {
         try {
             console.log('Attempting to login with:', { username, password });
 
-            const response = await axios.post('http://192.168.1.127:3001/userslogin', {
+            const response = await axios.post('http://192.168.100.199:3001/userslogin', {
                 username: username,
                 password: password
             });
@@ -40,7 +40,7 @@ const LoginScreen = () => {
 
     return (
         <View style={styles.container}>
-            <Text style={styles.header}>SafeZone</Text>
+            <Text style={styles.header}>GeoGuard</Text>
             <Image
                 source={require('../assets/icon.png')}
                 style={styles.icon}

@@ -11,7 +11,7 @@ const DetailsScreen = ({ route, navigation }) => {
 
     const fetchMarker = async () => {
       try {
-        const response = await axios.get(`http://192.168.1.127:3001/${type}markers/${id}`);
+        const response = await axios.get(`http://192.168.100.199:3001/${type}markers/${id}`);
         setMarker(response.data);
       } catch (error) {
         console.error(`Error fetching ${type} marker:`, error);

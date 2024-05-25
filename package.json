@@ -11,6 +11,7 @@
   "dependencies": {
     "@expo/vector-icons": "^13.0.0",
     "@expo/webpack-config": "^0.17.0",
+    "@mapbox/polyline": "^1.2.1",
     "@react-native-async-storage/async-storage": "^1.23.1",
     "@react-navigation/bottom-tabs": "^6.4.0",
     "@react-navigation/native": "^6.0.13",
@@ -24,6 +25,7 @@
     "expo-location": "~14.3.0",
     "expo-status-bar": "~1.4.0",
     "geolib": "^3.3.3",
+    "jwt-decode": "^4.0.0",
     "lodash.filter": "^4.6.0",
     "react": "18.0.0",
     "react-dom": "18.0.0",

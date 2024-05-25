@@ -1,7 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { StyleSheet, Text, View, Dimensions, Pressable, Alert, TextInput } from 'react-native';
-import MapView, { Callout, Marker, Polygon } from 'react-native-maps';
-import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
+import MapView, { Callout, Marker, Polygon, Polyline } from 'react-native-maps';
 import * as Location from 'expo-location';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
@@ -9,9 +8,10 @@ import * as turf from '@turf/helpers';
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
 import convex from '@turf/convex';
 import Modal from 'react-native-modal';
+import polyline from '@mapbox/polyline';
 
 const MapScreen = ({ navigation }) => {
-  const { signOut } = useAuth();
+  const { signOut, userToken } = useAuth(); // Access userToken from AuthContext
   const [location, setLocation] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
   const [safeMarkers, setSafeMarkers] = useState([]);
@@ -22,6 +22,12 @@ const MapScreen = ({ navigation }) => {
   const [newMarker, setNewMarker] = useState(null);
   const [description, setDescription] = useState('');
   const [warningShown, setWarningShown] = useState(false);
+  const [routeCoordinates, setRouteCoordinates] = useState([]);
+  const [itineraryInfo, setItineraryInfo] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [yellowMarkerPosition, setYellowMarkerPosition] = useState(null);
+  const [yellowMarkerInfo, setYellowMarkerInfo] = useState(null);
+  const [destinationSearchQuery, setDestinationSearchQuery] = useState('');
   const mapRef = useRef();
 
   useEffect(() => {
@@ -37,9 +43,20 @@ const MapScreen = ({ navigation }) => {
     })();
   }, []);
 
+  const logActivity = async (action) => {
+    try {
+      await axios.post('http://192.168.100.199:3001/activityLogs', {
+        action,
+        username: "current-username" // replace with actual username from token
+      });
+    } catch (error) {
+      console.error('Error logging activity:', error);
+    }
+  };
+
   const fetchSafeZones = async () => {
     try {
-      const response = await axios.get('http://192.168.1.127:3001/safezones');
+      const response = await axios.get('http://192.168.100.199:3001/safezones');
       const safeZones = response.data;
       const safeMarkersFromZones = safeZones.reduce((acc, zone) => {
         return acc.concat(zone.markers.map(marker => ({
@@ -62,7 +79,7 @@ const MapScreen = ({ navigation }) => {
 
   const fetchDangerousZones = async () => {
     try {
-      const response = await axios.get('http://192.168.1.127:3001/dangerzones');
+      const response = await axios.get('http://192.168.100.199:3001/dangerzones');
       const dangerousZones = response.data;
       const dangerousMarkersFromZones = dangerousZones.reduce((acc, zone) => {
         return acc.concat(zone.markers.map(marker => ({
@@ -108,7 +125,7 @@ const MapScreen = ({ navigation }) => {
         coordinates: [latitude, longitude],
         description: type === 'safe' ? '' : 'Itinerary Point'
       };
-      const endpoint = type === 'safe' ? 'http://192.168.1.127:3001/safetymarkers/add' : 'http://192.168.1.127:3001/itinerarymarkers/add';
+      const endpoint = type === 'safe' ? 'http://192.168.100.199:3001/safetymarkers/add' : 'http://192.168.100.199:3001/itinerarymarkers/add';
       try {
         const response = await axios.post(endpoint, markerData);
         if (type === 'safe') {
@@ -116,6 +133,11 @@ const MapScreen = ({ navigation }) => {
         } else {
           setItineraryMarkers([...itineraryMarkers, { position: [latitude, longitude], _id: response.data.data._id }]);
         }
+        await logActivity(`Added ${type} marker at (${latitude}, ${longitude})`);
+        
+        // Create alert for new zone addition
+        await createAlert(latitude, longitude, type);
+
       } catch (error) {
         console.error('Error adding marker:', error);
       }
@@ -133,17 +155,35 @@ const MapScreen = ({ navigation }) => {
       description
     };
     try {
-      const response = await axios.post('http://192.168.1.127:3001/dangermarkers/add', markerData);
+      const response = await axios.post('http://192.168.100.199:3001/dangermarkers/add', markerData);
       setDangerousMarkers([...dangerousMarkers, { position: [newMarker.latitude, newMarker.longitude], description, _id: response.data.data._id }]);
       setIsModalVisible(false);
       setDescription('');
+      await logActivity(`Added danger marker at (${newMarker.latitude}, ${newMarker.longitude})`);
+
+      // Create alert for new danger marker
+      await createAlert(newMarker.latitude, newMarker.longitude, 'danger');
+
     } catch (error) {
       console.error('Error adding danger marker:', error);
     }
   };
 
+  const createAlert = async (latitude, longitude, type) => {
+    const alertData = {
+      type: type === 'safe' ? 'safe' : 'danger',
+      coordinates: [latitude, longitude],
+      message: `New ${type} zone added at coordinates: (${latitude}, ${longitude})`
+    };
+    try {
+      await axios.post('http://192.168.100.199:3001/alerts', alertData);
+    } catch (error) {
+      console.error('Error creating alert:', error);
+    }
+  };
+
   const handleDeleteMarker = async (markerId, type) => {
-    const endpoint = type === 'safe' ? `http://192.168.1.127:3001/safetymarkers/${markerId}` : `http://192.168.1.127:3001/dangermarkers/${markerId}`;
+    const endpoint = type === 'safe' ? `http://192.168.100.199:3001/safetymarkers/${markerId}` : `http://192.168.100.199:3001/dangermarkers/${markerId}`;
     try {
       await axios.delete(endpoint);
       if (type === 'safe') {
@@ -151,12 +191,13 @@ const MapScreen = ({ navigation }) => {
       } else {
         setDangerousMarkers(dangerousMarkers.filter(marker => marker._id !== markerId));
       }
+      await logActivity(`Deleted ${type} marker with ID: ${markerId}`);
     } catch (error) {
       console.error('Error deleting marker:', error);
     }
   };
 
-  const checkDangerZone = () => {
+  const checkDangerZone = async () => {
     if (location && dangerousGeoJsonLayers.length > 0 && !warningShown) {
       const userLocation = turf.point([location.coords.longitude, location.coords.latitude]);
       const inDangerZone = dangerousGeoJsonLayers.some(layer =>
@@ -164,6 +205,14 @@ const MapScreen = ({ navigation }) => {
       );
       if (inDangerZone) {
         showWarning();
+        try {
+          await axios.post('http://192.168.100.199:3001/alerts', {
+            coordinates: [location.coords.latitude, location.coords.longitude]
+          });
+          await logActivity(`Entered danger zone at (${location.coords.latitude}, ${location.coords.longitude})`);
+        } catch (error) {
+          console.error('Error sending danger zone alert:', error);
+        }
       }
     }
   };
@@ -183,37 +232,131 @@ const MapScreen = ({ navigation }) => {
     return () => clearInterval(interval);
   }, [location, dangerousGeoJsonLayers]);
 
+  const calculateAndSetItinerary = async (endCoordinates) => {
+    if (location) {
+      const startCoordinates = [location.coords.latitude, location.coords.longitude];
+      try {
+        const response = await axios.post('http://192.168.100.199:3001/calculate-itinerary', {
+          startCoordinates,
+          endCoordinates,
+          profile: "driving"
+        });
+
+        const itinerary = response.data.itinerary;
+
+        if (itinerary && itinerary.routes && itinerary.routes.length > 0) {
+          const routeCoordinates = polyline.decode(itinerary.routes[0].geometry);
+          const routeLatLngs = routeCoordinates.map(coord => ({ latitude: coord[0], longitude: coord[1] }));
+
+          setRouteCoordinates(routeLatLngs);
+
+          setItineraryInfo({
+            distance: itinerary.routes[0].legs[0].distance,
+            duration: itinerary.routes[0].legs[0].duration,
+            startName: "Current Location",
+            endName: "Destination",
+            summary: itinerary.routes[0].legs[0].summary
+          });
+        } else {
+          console.log('Itinerary calculation failed:', itinerary);
+        }
+      } catch (error) {
+        console.error('Error calculating itinerary:', error);
+      }
+    } else {
+      Alert.alert("Location Error", "Unable to retrieve current location.");
+    }
+  };
+
+  const performSearch = async () => {
+    try {
+      const endpoint = "http://192.168.100.199:3001/mapbox/forward";
+      const params = { q: searchQuery, limit: 1 };
+
+      const response = await axios.get(endpoint, { params });
+
+      if (response.data.features.length === 0) {
+        Alert.alert("Search Error", "No results found");
+        return;
+      }
+
+      const result = response.data.features[0];
+      const [longitudeResult, latitudeResult] = result.geometry.coordinates;
+
+      // Remove previous yellow marker
+      setYellowMarkerPosition(null);
+
+      // Set new yellow marker
+      setYellowMarkerPosition({ latitude: latitudeResult, longitude: longitudeResult });
+
+      // Fetch the location name
+      try {
+        const locationResponse = await axios.get("http://192.168.100.199:3001/mapbox/reverse-geocode", {
+          params: {
+            longitude: longitudeResult,
+            latitude: latitudeResult,
+          },
+        });
+        const locationName = locationResponse.data.features[0]?.place_name || "Unknown location";
+        setYellowMarkerInfo({ locationName });
+
+        animateToRegion(latitudeResult, longitudeResult);
+      } catch (error) {
+        console.error("Error fetching location name:", error);
+      }
+    } catch (error) {
+      console.error("Error performing search:", error);
+    }
+  };
+
+  const searchDestinationAndCalculateItinerary = async () => {
+    try {
+      const endpoint = "http://192.168.100.199:3001/mapbox/forward";
+      const params = { q: destinationSearchQuery, limit: 1 };
+
+      const response = await axios.get(endpoint, { params });
+
+      if (response.data.features.length === 0) {
+        Alert.alert("Search Error", "No results found");
+        return;
+      }
+
+      const result = response.data.features[0];
+      const [longitudeResult, latitudeResult] = result.geometry.coordinates;
+
+      // Calculate and set itinerary with the found coordinates
+      calculateAndSetItinerary([latitudeResult, longitudeResult]);
+    } catch (error) {
+      console.error("Error performing search:", error);
+    }
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: 'white' }}>
       <View style={styles.searchContainer}>
-        <GooglePlacesAutocomplete
-          placeholder='Search...'
-          textInputProps={{
-            placeholderTextColor: 'grey',
-          }}
-          fetchDetails={true}
-          autoFocus={true}
-          GooglePlacesSearchQuery={{
-            rankby: 'distance',
-          }}
-          onPress={(data, details = null) => {
-            animateToRegion(details.geometry.location.lat, details.geometry.location.lng);
-          }}
-          query={{
-            key: 'YOUR_GOOGLE_PLACES_API_KEY',
-            language: 'en',
-            components: 'country:uk',
-          }}
-          styles={{
-            container: { flex: 1 },
-            listView: { backgroundColor: 'white', borderRadius: 25 },
-            poweredContainer: {
-              display: 'none',
-            },
-          }}
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search location..."
+          value={searchQuery}
+          onChangeText={setSearchQuery}
         />
+        <Pressable onPress={performSearch} style={styles.searchButton}>
+          <Text style={styles.buttonText}>Search</Text>
+        </Pressable>
         <Pressable onPress={signOut} style={styles.logoutButton}>
           <Text style={styles.buttonText}>Logout</Text>
+        </Pressable>
+      </View>
+
+      <View style={styles.destinationContainer}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Enter destination..."
+          value={destinationSearchQuery}
+          onChangeText={setDestinationSearchQuery}
+        />
+        <Pressable onPress={searchDestinationAndCalculateItinerary} style={styles.searchButton}>
+          <Text style={styles.buttonText}>Calculate Itinerary</Text>
         </Pressable>
       </View>
 
@@ -237,8 +380,7 @@ const MapScreen = ({ navigation }) => {
             [
               { text: "Cancel", style: "cancel" },
               { text: "Safe", onPress: () => handleAddMarker(latitude, longitude, 'safe') },
-              { text: "Danger", onPress: () => handleAddMarker(latitude, longitude, 'danger') },
-              { text: "Itinerary", onPress: () => handleAddMarker(latitude, longitude, 'itinerary') }
+              { text: "Danger", onPress: () => handleAddMarker(latitude, longitude, 'danger') }
             ]
           );
         }}
@@ -289,7 +431,30 @@ const MapScreen = ({ navigation }) => {
             strokeWidth={2}
           />
         ))}
+        {routeCoordinates.length > 0 && (
+          <Polyline coordinates={routeCoordinates} strokeColor="#2A629A" strokeWidth={2} />
+        )}
+        {yellowMarkerPosition && (
+          <Marker
+            coordinate={yellowMarkerPosition}
+            pinColor='blue'
+          >
+            <Callout>
+              <Text>{yellowMarkerInfo?.locationName || "Unknown location"}</Text>
+            </Callout>
+          </Marker>
+        )}
       </MapView>
+
+      {itineraryInfo && (
+        <View style={styles.itineraryInfo}>
+          <Text style={styles.itineraryText}>Distance: {(itineraryInfo.distance / 1000).toFixed(2)} km</Text>
+          <Text style={styles.itineraryText}>Duration: {(itineraryInfo.duration / 3600).toFixed(2)} hrs</Text>
+          <Pressable onPress={() => setItineraryInfo(null)} style={styles.closeButton}>
+            <Text style={styles.buttonText}>Close</Text>
+          </Pressable>
+        </View>
+      )}
 
       <Modal isVisible={isModalVisible}>
         <View style={styles.modalContainer}>
@@ -316,79 +481,125 @@ export default MapScreen;
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
+    flex: 1, 
+    backgroundColor: '#fff', 
+    alignItems: 'center', 
     justifyContent: 'center',
   },
   searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 10,
-    zIndex: 1,
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    padding: 10, 
+    zIndex: 1, 
     marginTop: 50,
   },
+  destinationContainer: {
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    padding: 10, 
+    zIndex: 1, 
+    marginTop: 10,
+  },
   map: {
-    width: Dimensions.get('window').width,
+    width: Dimensions.get('window').width, 
     height: Dimensions.get('window').height,
   },
   modalContainer: {
-    backgroundColor: 'white',
-    padding: 20,
+    backgroundColor: 'white', 
+    padding: 20, 
     borderRadius: 10,
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 18, 
+    fontWeight: 'bold', 
     marginBottom: 10,
   },
   input: {
-    borderWidth: 1,
-    borderColor: 'gray',
-    padding: 10,
-    marginBottom: 10,
+    borderWidth: 1, 
+    borderColor: 'gray', 
+    padding: 10, 
+    marginBottom: 10, 
     borderRadius: 5,
   },
   bottomBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    backgroundColor: '#007AFF',
-    padding: 10,
-    position: 'absolute',
-    bottom: 0,
+    flexDirection: 'row', 
+    justifyContent: 'space-around', 
+    backgroundColor: '#007AFF', 
+    padding: 10, 
+    position: 'absolute', 
+    bottom: 0, 
     width: '100%',
   },
   iconContainer: {
     alignItems: 'center',
   },
   iconText: {
-    color: 'white',
+    color: 'white', 
     fontSize: 16,
   },
-  logoutButton: {
-    backgroundColor: '#FF0000',
-    padding: 10,
+  searchInput: {
+    flex: 1,
+    height: 40,
+    borderColor: 'gray',
+    borderWidth: 1,
+    paddingHorizontal: 10,
     borderRadius: 5,
-    marginLeft: 10,
+    marginRight: 10,
   },
-  deleteButton: {
-    backgroundColor: '#FF0000',
-    padding: 5,
-    borderRadius: 5,
-  },
-  confirmButton: {
+  searchButton: {
     backgroundColor: '#007AFF',
     padding: 10,
     borderRadius: 5,
+  },
+  logoutButton: {
+    backgroundColor: '#FF0000', 
+    padding: 10, 
+    borderRadius: 5, 
+    marginLeft: 10,
+  },
+  deleteButton: {
+    backgroundColor: '#FF0000', 
+    padding: 5, 
+    borderRadius: 5,
+  },
+  confirmButton: {
+    backgroundColor: '#007AFF', 
+    padding: 10, 
+    borderRadius: 5, 
     marginBottom: 10,
   },
   cancelButton: {
-    backgroundColor: '#808080',
-    padding: 10,
+    backgroundColor: '#808080', 
+    padding: 10, 
     borderRadius: 5,
   },
   buttonText: {
-    color: 'white',
+    color: 'white', 
     fontSize: 16,
+  },
+  itineraryInfo: {
+    position: 'absolute',
+    bottom: 100,
+    left: 10,
+    right: 10,
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.8,
+    shadowRadius: 2,
+    elevation: 5,
+  },
+  itineraryText: {
+    fontSize: 16,
+    marginBottom: 10,
+  },
+  closeButton: {
+    backgroundColor: '#007AFF',
+    padding: 10,
+    borderRadius: 5,
+    marginTop: 10,
+    alignItems: 'center',
   },
 });

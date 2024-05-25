@@ -14,8 +14,8 @@ const ListScreen = ({ navigation }) => {
     const fetchZones = async () => {
         try {
             const [safeResponse, dangerResponse] = await Promise.all([
-                axios.get('http://192.168.1.127:3001/safezones'),
-                axios.get('http://192.168.1.127:3001/dangerzones')
+                axios.get('http://192.168.100.199:3001/safezones'),
+                axios.get('http://192.168.100.199:3001/dangerzones')
             ]);
             setSafeZones(safeResponse.data);
             setDangerZones(dangerResponse.data);
@@ -25,7 +25,7 @@ const ListScreen = ({ navigation }) => {
     };
 
     const deleteZone = async (id, type) => {
-        const endpoint = type === 'safe' ? `http://192.168.1.127:3001/safezones/${id}` : `http://192.168.1.127:3001/dangerzones/${id}`;
+        const endpoint = type === 'safe' ? `http://192.168.100.199:3001/safezones/${id}` : `http://192.168.100.199:3001/dangerzones/${id}`;
         try {
             await axios.delete(endpoint);
             fetchZones();
@@ -38,27 +38,11 @@ const ListScreen = ({ navigation }) => {
         <View style={styles.zoneContainer}>
             <Text style={styles.zoneText}>Zone {index + 1} ({type})</Text>
             <View style={styles.buttonContainer}>
-                <Pressable
+                <Pressable textAlign="center" 
                     style={[styles.button, styles.infoButton]}
                     onPress={() => navigation.navigate('DetailsScreen', { id: item._id, type })}
                 >
                     <Text style={styles.buttonText}>Show Information</Text>
-                </Pressable>
-
-                <Pressable
-                    style={[styles.button, styles.deleteButton]}
-                    onPress={() => {
-                        Alert.alert(
-                            "Delete Zone",
-                            "Are you sure you want to delete this zone?",
-                            [
-                                { text: "Cancel", style: "cancel" },
-                                { text: "Delete", onPress: () => deleteZone(item._id, type) }
-                            ]
-                        );
-                    }}
-                >
-                    <Text style={styles.buttonText}>Delete</Text>
                 </Pressable>
             </View>
         </View>
