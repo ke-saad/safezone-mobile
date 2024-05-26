@@ -12,6 +12,7 @@ import MapScreen from './screens/MapScreen';
 import ListScreen from './screens/ListScreen';
 import DetailsScreen from './screens/DetailsScreen';
 import LoginScreen from './screens/LoginScreen';
+import DirectivesScreen from './screens/DirectivesScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -26,9 +27,9 @@ function MainTabs() {
           bottom: 30,
           left: 10,
           right: 10,
-          backgroundColor: "white",
-          borderTopColor: "white",
-          position: "absolute",
+          backgroundColor: 'white',
+          borderTopColor: 'white',
+          position: 'absolute',
           borderRadius: 15,
           height: 70,
           paddingBottom: 0,
@@ -36,18 +37,27 @@ function MainTabs() {
         },
         tabBarIcon: ({ focused }) => {
           const icons = {
-            MapScreen: focused ? "map" : "map-outline",
-            ListScreen: focused ? "list" : "list-outline",
-            DetailsScreen: focused ? "information-circle" : "information-circle-outline",
+            MapScreen: focused ? 'map' : 'map-outline',
+            ListScreen: focused ? 'list' : 'list-outline',
+            DirectivesScreen: focused ? 'information-circle' : 'information-circle-outline',
           };
-          return <Ionicons name={icons[route.name]} size={30} color={"#007AFF"} />;
+          return <Ionicons name={icons[route.name]} size={30} color={'#007AFF'} />;
         },
       })}
     >
       <Tab.Screen name="MapScreen" component={MapScreen} />
       <Tab.Screen name="ListScreen" component={ListScreen} />
-      <Tab.Screen name="DetailsScreen" component={DetailsScreen} />
+      <Tab.Screen name="DirectivesScreen" component={DirectivesScreen} />
     </Tab.Navigator>
+  );
+}
+
+function AppNavigator() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="MainTabs" component={MainTabs} />
+      <Stack.Screen name="DetailsScreen" component={DetailsScreen} />
+    </Stack.Navigator>
   );
 }
 
@@ -66,7 +76,7 @@ function Root() {
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {userToken ? (
-          <Stack.Screen name="MainTabs" component={MainTabs} />
+          <Stack.Screen name="AppNavigator" component={AppNavigator} />
         ) : (
           <Stack.Screen name="LoginScreen" component={LoginScreen} />
         )}
@@ -92,7 +102,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   shadow: {
-    shadowColor: "black",
+    shadowColor: 'black',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.25,
     shadowRadius: 10,

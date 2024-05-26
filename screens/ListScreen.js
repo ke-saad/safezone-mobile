@@ -53,7 +53,7 @@ const ListScreen = ({ navigation }) => {
             <Text style={styles.title}>All Zones</Text>
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
             <FlatList
-                data={[...safeZones.map((zone, index) => ({ ...zone, type: 'Safe' })), ...dangerZones.map((zone, index) => ({ ...zone, type: 'Dangerous' }))]}
+                data={[...safeZones.map((zone, index) => ({ ...zone, type: 'Safe' })), ...dangerZones.map((zone, index) => ({ ...zone, type: 'Danger' }))]}
                 keyExtractor={item => item._id}
                 renderItem={({ item, index }) => renderZone({ item, index, type: item.type })}
                 contentContainerStyle={styles.list}
