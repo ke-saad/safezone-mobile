@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { View, TextInput, Pressable, StyleSheet, Alert, Image, Text } from 'react-native';
 import axios from 'axios';
-import { useAuth } from '../context/AuthContext'; // Ensure proper import
+import { useAuth } from '../context/AuthContext'; 
 
 const LoginScreen = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
-    const { signIn } = useAuth(); // Use the signIn method from AuthContext
+    const { signIn } = useAuth(); 
 
     const handleLogin = async () => {
         try {
@@ -20,7 +20,7 @@ const LoginScreen = () => {
             console.log('Response:', response);
 
             if (response.data.token) {
-                signIn({ token: response.data.token }); // Use signIn to update context
+                signIn({ token: response.data.token }); 
             } else {
                 Alert.alert('Login Error', 'No token received from server.');
             }

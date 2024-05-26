@@ -22,7 +22,7 @@ const DetailsScreen = ({ route, navigation }) => {
 
     return () => {
       setMarker(null);
-      route.params.id = null;  // Reset id when leaving the screen
+      route.params.id = null;
     };
   }, [id, type]);
 

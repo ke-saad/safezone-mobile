@@ -11,7 +11,7 @@ import Modal from 'react-native-modal';
 import polyline from '@mapbox/polyline';
 
 const MapScreen = ({ navigation }) => {
-  const { signOut, userToken } = useAuth(); // Access userToken from AuthContext
+  const { signOut, userToken } = useAuth(); 
   const [location, setLocation] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
   const [safeMarkers, setSafeMarkers] = useState([]);
@@ -47,7 +47,7 @@ const MapScreen = ({ navigation }) => {
     try {
       await axios.post('http://192.168.100.199:3001/activityLogs', {
         action,
-        username: "current-username" // replace with actual username from token
+        username: "current-username" 
       });
     } catch (error) {
       console.error('Error logging activity:', error);
@@ -135,7 +135,7 @@ const MapScreen = ({ navigation }) => {
         }
         await logActivity(`Added ${type} marker at (${latitude}, ${longitude})`);
         
-        // Create alert for new zone addition
+        
         await createAlert(latitude, longitude, type);
 
       } catch (error) {
@@ -161,7 +161,7 @@ const MapScreen = ({ navigation }) => {
       setDescription('');
       await logActivity(`Added danger marker at (${newMarker.latitude}, ${newMarker.longitude})`);
 
-      // Create alert for new danger marker
+      
       await createAlert(newMarker.latitude, newMarker.longitude, 'danger');
 
     } catch (error) {
@@ -283,13 +283,13 @@ const MapScreen = ({ navigation }) => {
       const result = response.data.features[0];
       const [longitudeResult, latitudeResult] = result.geometry.coordinates;
 
-      // Remove previous yellow marker
+      
       setYellowMarkerPosition(null);
 
-      // Set new yellow marker
+      
       setYellowMarkerPosition({ latitude: latitudeResult, longitude: longitudeResult });
 
-      // Fetch the location name
+      
       try {
         const locationResponse = await axios.get("http://192.168.100.199:3001/mapbox/reverse-geocode", {
           params: {
@@ -324,7 +324,7 @@ const MapScreen = ({ navigation }) => {
       const result = response.data.features[0];
       const [longitudeResult, latitudeResult] = result.geometry.coordinates;
 
-      // Calculate and set itinerary with the found coordinates
+      
       calculateAndSetItinerary([latitudeResult, longitudeResult]);
     } catch (error) {
       console.error("Error performing search:", error);
